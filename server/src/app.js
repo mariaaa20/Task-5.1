@@ -1,6 +1,9 @@
+
 import express from 'express';
 import morgan from 'morgan';
 import cors from 'cors';
+import mongoSanitize from 'express-mongo-sanitize';
+
 import authRoutes from './routes/auth.js';
 import reviewRoutes from './routes/reviews.js';
 import userRoutes from './routes/users.js';
@@ -9,8 +12,15 @@ import instructorRoutes from './routes/instructors.js';
 const app = express();
 
 app.use(morgan('dev'));
-app.use(cors({ origin: 'http://localhost:5175', credentials: false }));
+app.use(cors({
+  origin: 'http://localhost:5175',
+  credentials: false
+}));
+
 app.use(express.json());
+
+// Protect incoming request data from MongoDB operators
+app.use(mongoSanitize());
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
@@ -27,7 +37,9 @@ app.use((req, res) => {
 // Error handler
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(err.status || 500).json({ message: err.message || 'Server Error' });
+  res.status(err.status || 500).json({
+    message: err.message || 'Server Error'
+  });
 });
 
 export default app;
