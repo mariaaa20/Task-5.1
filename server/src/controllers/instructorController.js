@@ -114,61 +114,38 @@ export async function getDirectory(req, res, next) {
 
 export async function searchInstructors(req, res, next) {
   try {
-
-    // Validate search parameters
-    const { error, value } = searchSchema.validate(req.query);
-
-    if (error) {
-      return res.status(400).json({
-        message: 'Invalid search parameters'
-      });
-    }
-
-    // Build our own filter.
-    // Never pass req.query directly into MongoDB.
-
     const filter = {};
 
-    if (value.name) {
-      const safeName = value.name.replace(
-        /[.*+?^${}()|[\]\\]/g,
-        '\\$&'
-      );
-
-      filter.name = {
-        $regex: safeName,
-        $options: 'i'
-      };
+    // Only accept simple string values for approved search fields.
+    // Ignore objects, MongoDB operators, and all unsupported parameters.
+    if (typeof req.query.name === 'string' && req.query.name.trim()) {
+      const name = req.query.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.name = { $regex: name, $options: 'i' };
     }
 
-    if (value.department) {
-      const safeDepartment = value.department.replace(
-        /[.*+?^${}()|[\]\\]/g,
-        '\\$&'
-      );
-
-      filter.department = {
-        $regex: safeDepartment,
-        $options: 'i'
-      };
+    if (typeof req.query.department === 'string' && req.query.department.trim()) {
+      const department = req.query.department.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.department = { $regex: department, $options: 'i' };
     }
 
-    if (value.role) {
-      filter.role = value.role;
+    if (
+      typeof req.query.role === 'string' &&
+      ['instructor', 'superadmin'].includes(req.query.role)
+    ) {
+      filter.role = req.query.role;
     }
 
-    // Return only public fields
     const instructors = await Instructor.find(filter)
       .select('name department role')
       .sort({ name: 1 })
       .lean();
 
-    res.json({
+    return res.json({
       count: instructors.length,
       instructors
     });
-
   } catch (err) {
     next(err);
   }
 }
+
